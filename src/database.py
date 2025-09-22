@@ -58,11 +58,12 @@ class VoiceSession(_BaseModel):
 class VoiceDatabase:
     """Database handler for voice activity tracking."""
 
-    def __init__(self, db_path: str = "voice_activity.db", logger: Logger) -> None:
+    def __init__(self, logger: Logger, db_path: str = "voice_activity.db") -> None:
         """
         Initialize the database connection.
 
         Args:
+            logger: Logger instance for logging.
             db_path (optional): Path to the SQLite database file. Defaults to "voice_activity.db".
         """
         self.logger = logger
