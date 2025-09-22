@@ -1,4 +1,7 @@
 import asyncio
+import signal
+import sys
+from collections.abc import Callable
 from os import environ
 from typing import Any, Optional
 
@@ -44,6 +47,23 @@ async def run_http_server() -> None:
 def main() -> None:  # noqa: C901, PLR0915
     """Main function to run the Discord bot."""
     load_dotenv()
+
+    def signal_handler(signum: signal.Signals, _frame: Callable) -> None:
+        """Handle shutdown signals gracefully."""
+        logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.create_task(bot.close())  # noqa: RUF006
+
+        except Exception:
+            logger.exception("Error during shutdown", exc_info=True)
+
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     logger.add(
         "discord_{time:YYYY-MM-DD}.log",
@@ -96,6 +116,15 @@ def main() -> None:  # noqa: C901, PLR0915
             logger.exception("Failed to sync commands")
 
         asyncio.create_task(run_http_server())  # noqa: RUF006
+
+    @bot.event
+    async def on_disconnect() -> None:
+        """Handle bot disconnect."""
+        logger.debug("Bot disconnected, exporting data...")
+        voice_tracker = bot.get_cog("VoiceTracker")
+
+        if voice_tracker:
+            await voice_tracker.db.export_to_json()
 
     @bot.event
     async def on_guild_join(guild: discord.Guild) -> None:

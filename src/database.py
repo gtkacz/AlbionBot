@@ -1,16 +1,11 @@
+import json
+import pathlib
 from datetime import datetime, timedelta
+from glob import glob
 from typing import Optional
 
 import peewee
-from peewee import (
-    BooleanField,
-    CharField,
-    DateTimeField,
-    FloatField,
-    ForeignKeyField,
-    Model,
-    SqliteDatabase,
-)
+from peewee import BooleanField, CharField, DateTimeField, FloatField, ForeignKeyField, Model, SqliteDatabase
 
 from custom_types import GuildStat
 
@@ -253,3 +248,98 @@ class VoiceDatabase:
 
         except VoiceSession.DoesNotExist:
             return 0.0
+
+    @staticmethod
+    async def export_to_json() -> None:
+        """Export all database tables to JSON backup."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"voice_backup_{timestamp}.json"
+
+        data = {"users": [], "guilds": [], "channels": [], "voice_sessions": []}
+
+        for user in User.select():
+            data["users"].append({"user_id": user.user_id, "username": user.username})
+
+        for guild in Guild.select():
+            data["guilds"].append({"guild_id": guild.guild_id, "guild_name": guild.guild_name})
+
+        for channel in Channel.select():
+            data["channels"].append({
+                "channel_id": channel.channel_id,
+                "channel_name": channel.channel_name,
+                "guild_id": channel.guild.guild_id,
+            })
+
+        for session in VoiceSession.select():
+            data["voice_sessions"].append({
+                "id": session.id,
+                "user_id": session.user.user_id,
+                "guild_id": session.guild.guild_id,
+                "channel_id": session.channel.channel_id,
+                "start_time": session.start_time.isoformat(),
+                "end_time": session.end_time.isoformat() if session.end_time else None,
+                "duration_seconds": session.duration_seconds,
+                "is_active": session.is_active,
+            })
+
+        with pathlib.Path(filename).open("w", encoding="utf-8") as f:  # noqa: ASYNC230
+            json.dump(data, f, indent=2)
+
+        await VoiceDatabase.cleanup_old_backups()
+
+    @staticmethod
+    async def cleanup_old_backups() -> None:
+        """Keep only the 2 most recent backup files."""
+        backup_files = glob("voice_backup_*.json")
+        backup_files.sort(reverse=True)
+
+        for old_file in backup_files[2:]:
+            pathlib.Path(old_file).unlink()
+
+    @staticmethod
+    async def import_from_json() -> None:
+        """Import data from the most recent JSON backup."""
+        backup_files = glob("voice_backup_*.json")
+        if not backup_files:
+            return
+
+        backup_files.sort(reverse=True)
+        latest_backup = backup_files[0]
+
+        with pathlib.Path(latest_backup).open("r", encoding="utf-8") as f:  # noqa: ASYNC230
+            data = json.load(f)
+
+        for user_data in data.get("users", []):
+            await VoiceDatabase.upsert_user(user_data["user_id"], user_data["username"])
+
+        for guild_data in data.get("guilds", []):
+            await VoiceDatabase.upsert_guild(guild_data["guild_id"], guild_data["guild_name"])
+
+        for channel_data in data.get("channels", []):
+            await VoiceDatabase.upsert_channel(
+                channel_data["channel_id"], channel_data["channel_name"], channel_data["guild_id"],
+            )
+
+        for session_data in data.get("voice_sessions", []):
+            try:
+                existing = VoiceSession.select().where(VoiceSession.id == session_data["id"])
+
+                if existing.exists():
+                    continue
+
+                user = User.get(User.user_id == session_data["user_id"])
+                guild = Guild.get(Guild.guild_id == session_data["guild_id"])
+                channel = Channel.get(Channel.channel_id == session_data["channel_id"])
+
+                VoiceSession.create(
+                    id=session_data["id"],
+                    user=user,
+                    guild=guild,
+                    channel=channel,
+                    start_time=datetime.fromisoformat(session_data["start_time"]),
+                    end_time=datetime.fromisoformat(session_data["end_time"]) if session_data["end_time"] else None,
+                    duration_seconds=session_data["duration_seconds"],
+                    is_active=session_data["is_active"],
+                )
+            except (User.DoesNotExist, Guild.DoesNotExist, Channel.DoesNotExist):
+                continue

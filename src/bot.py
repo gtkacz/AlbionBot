@@ -37,6 +37,7 @@ class VoiceTracker(commands.Cog):
         Initialize database and track existing users.
         """
         await self.db.connect()
+        await self.db.import_from_json()
         await self.track_existing_users()
 
     async def track_existing_users(self) -> None:
@@ -513,5 +514,6 @@ class VoiceTracker(commands.Cog):
         for _user_id, session_id in list(self.inactive_sessions.items()):
             await self.db.end_session(session_id)
 
+        await self.db.export_to_json()
         await self.db.close()
         self.logger.info("VoiceTracker cog unloaded successfully")
