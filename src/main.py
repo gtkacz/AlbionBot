@@ -71,7 +71,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
     @bot.event
     async def on_ready() -> None:
-        logger.info(f"{bot.user} has connected to Discord!")
+        logger.success(f"{bot.user} has connected to Discord!")
         logger.info(f"Bot is in {len(bot.guilds)} guilds")
 
         for guild in bot.guilds:
@@ -165,7 +165,7 @@ def main() -> None:  # noqa: C901, PLR0915
         logger.critical("DISCORD_TOKEN not found in environment variables!")
         return
 
-    logger.success("Starting bot with provided token...")
+    logger.debug("Starting bot with provided token...")
 
     bot.run(token, log_handler=None)
 

@@ -319,22 +319,35 @@ class VoiceTracker(commands.Cog):
         total_active_seconds = stored_active_time + current_active_time
         total_inactive_seconds = stored_inactive_time + current_inactive_time
 
+        total_offline_seconds = seconds_in_day - total_active_seconds - total_inactive_seconds
+
+        offline_hours = int(total_offline_seconds // 3600)
+        offline_minutes = int((total_offline_seconds % 3600) // 60)
+        offline_seconds = int(total_offline_seconds % 60)
+        offline_pct = (total_offline_seconds / seconds_in_day) * 100 if total_offline_seconds > 0 else 0
+
+        online_hours = 24 - int(total_offline_seconds // 3600)
+        online_minutes = (24 * 60) - int((total_offline_seconds % 3600) // 60)
+        online_seconds = (online_minutes * 60) - int(total_offline_seconds % 60)
+        online_pct = 100 - ((total_offline_seconds / seconds_in_day) * 100 if total_offline_seconds > 0 else 0)
+
         active_hours = int(total_active_seconds // 3600)
         active_minutes = int((total_active_seconds % 3600) // 60)
         active_seconds = int(total_active_seconds % 60)
-        active_pct = (total_active_seconds / seconds_in_day) * 100 if total_active_seconds > 0 else 0
+        active_pct = (
+            (total_active_seconds / (total_active_seconds + total_inactive_seconds)) * 100
+            if total_active_seconds > 0
+            else 0
+        )
 
         inactive_hours = int(total_inactive_seconds // 3600)
         inactive_minutes = int((total_inactive_seconds % 3600) // 60)
         inactive_seconds = int(total_inactive_seconds % 60)
-        inactive_pct = (total_inactive_seconds / seconds_in_day) * 100 if total_inactive_seconds > 0 else 0
-
-        total_inactive_seconds = seconds_in_day - total_active_seconds - total_inactive_seconds
-
-        offline_hours = int(total_inactive_seconds // 3600)
-        offline_minutes = int((total_inactive_seconds % 3600) // 60)
-        offline_seconds = int(total_inactive_seconds % 60)
-        offline_pct = (total_inactive_seconds / seconds_in_day) * 100 if total_inactive_seconds > 0 else 0
+        inactive_pct = (
+            (total_inactive_seconds / (total_active_seconds + total_inactive_seconds)) * 100
+            if total_inactive_seconds > 0
+            else 0
+        )
 
         self.logger.info(
             f"Voice time query: {target.name} has {active_hours}h {active_minutes}m {active_seconds}s active today",
@@ -346,11 +359,21 @@ class VoiceTracker(commands.Cog):
             color=discord.Color.blue(),
         )
 
-        embed.add_field(name="Active Time", value=f"{active_hours}h {active_minutes}m {active_seconds}s ({active_pct:.1f}%)", inline=False)
+        embed.add_field(
+            name="Active Time",
+            value=f"{active_hours}h {active_minutes}m {active_seconds}s ({active_pct:.1f}%)",
+            inline=False,
+        )
 
         embed.add_field(
             name="AFK Time",
             value=f"{inactive_hours}h {inactive_minutes}m {inactive_seconds}s ({inactive_pct:.1f}%)",
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Online",
+            value=f"{online_hours}h {online_minutes}m {online_seconds}s ({online_pct:.1f}%)",
             inline=False,
         )
 
