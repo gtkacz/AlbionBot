@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Custom
+.ruff_cache/
+.vscode/
+requirements.*.txt
