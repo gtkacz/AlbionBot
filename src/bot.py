@@ -118,6 +118,7 @@ class VoiceTracker(commands.Cog):
                 member.voice.channel.name,
                 is_active=True,
             )
+
             self.active_sessions[user_id] = session_id
             self.logger.info(f"Started active tracking {member.name} (ID: {user_id}) in {member.voice.channel.name}")
             self.logger.debug(f"Total active sessions: {len(self.active_sessions)}")
@@ -144,7 +145,9 @@ class VoiceTracker(commands.Cog):
                 member.voice.channel.name,
                 is_active=False,
             )
+
             self.inactive_sessions[user_id] = session_id
+
             self.logger.info(f"Started inactive tracking {member.name} (ID: {user_id}) in {member.voice.channel.name}")
 
     async def end_active_session(self, member: discord.Member) -> None:
@@ -204,8 +207,10 @@ class VoiceTracker(commands.Cog):
 
         if before.channel is None and after.channel is not None:
             self.logger.info(f"{member.name} joined voice channel {after.channel.name}")
+
             if self.is_user_active(member):
                 await self.start_active_session(member)
+
             else:
                 await self.start_inactive_session(member)
 
@@ -217,9 +222,12 @@ class VoiceTracker(commands.Cog):
             self.logger.info(
                 f"{member.name} moved from {before.channel.name if before.channel else 'None'} to {after.channel.name}",
             )
+
             await self.end_all_sessions(member)
+
             if self.is_user_active(member):
                 await self.start_active_session(member)
+
             else:
                 await self.start_inactive_session(member)
 
@@ -250,6 +258,7 @@ class VoiceTracker(commands.Cog):
                 self.logger.info(f"{after.name} went {after.status}")
                 await self.end_active_session(after)
                 await self.start_inactive_session(after)
+
             elif before.status in {
                 discord.Status.invisible,
                 discord.Status.idle,
@@ -305,16 +314,27 @@ class VoiceTracker(commands.Cog):
         stored_active_time = await self.db.get_user_time_for_date(user_id, guild_id, today_key, is_active=True)
         stored_inactive_time = await self.db.get_user_time_for_date(user_id, guild_id, today_key, is_active=False)
 
+        seconds_in_day = 24 * 3600
+
         total_active_seconds = stored_active_time + current_active_time
         total_inactive_seconds = stored_inactive_time + current_inactive_time
 
         active_hours = int(total_active_seconds // 3600)
         active_minutes = int((total_active_seconds % 3600) // 60)
         active_seconds = int(total_active_seconds % 60)
+        active_pct = (total_active_seconds / seconds_in_day) * 100 if total_active_seconds > 0 else 0
 
         inactive_hours = int(total_inactive_seconds // 3600)
         inactive_minutes = int((total_inactive_seconds % 3600) // 60)
         inactive_seconds = int(total_inactive_seconds % 60)
+        inactive_pct = (total_inactive_seconds / seconds_in_day) * 100 if total_inactive_seconds > 0 else 0
+
+        total_inactive_seconds = seconds_in_day - total_active_seconds - total_inactive_seconds
+
+        offline_hours = int(total_inactive_seconds // 3600)
+        offline_minutes = int((total_inactive_seconds % 3600) // 60)
+        offline_seconds = int(total_inactive_seconds % 60)
+        offline_pct = (total_inactive_seconds / seconds_in_day) * 100 if total_inactive_seconds > 0 else 0
 
         self.logger.info(
             f"Voice time query: {target.name} has {active_hours}h {active_minutes}m {active_seconds}s active today",
@@ -326,16 +346,23 @@ class VoiceTracker(commands.Cog):
             color=discord.Color.blue(),
         )
 
-        embed.add_field(name="Active Time", value=f"{active_hours}h {active_minutes}m {active_seconds}s", inline=False)
+        embed.add_field(name="Active Time", value=f"{active_hours}h {active_minutes}m {active_seconds}s ({active_pct:.1f}%)", inline=False)
 
         embed.add_field(
-            name="Inactive Time",
-            value=f"{inactive_hours}h {inactive_minutes}m {inactive_seconds}s",
+            name="AFK Time",
+            value=f"{inactive_hours}h {inactive_minutes}m {inactive_seconds}s ({inactive_pct:.1f}%)",
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Offline",
+            value=f"{offline_hours}h {offline_minutes}m {offline_seconds}s ({offline_pct:.1f}%)",
             inline=False,
         )
 
         if user_id in self.active_sessions:
             embed.add_field(name="Status", value="🎙️ Currently active", inline=False)
+
         elif user_id in self.inactive_sessions:
             embed.add_field(name="Status", value="🔇 Currently inactive", inline=False)
 
@@ -359,19 +386,22 @@ class VoiceTracker(commands.Cog):
 
         for stat in user_stats:
             user_id = stat["user_id"]
+            stat["inactive_seconds"] = 0.0
+
             if user_id in self.active_sessions:
                 current_time = await self.db.get_active_session_time(self.active_sessions[user_id])
                 stat["total_seconds"] += current_time
+
             if user_id in self.inactive_sessions:
                 current_time = await self.db.get_active_session_time(self.inactive_sessions[user_id])
-                stat["total_seconds"] += current_time
+                stat["inactive_seconds"] += current_time
 
         sorted_users = sorted(user_stats, key=itemgetter("total_seconds"), reverse=True)
         self.logger.info(f"Generated stats for {len(sorted_users)} users over {days} days")
 
         embed = discord.Embed(
             title="Voice Activity Leaderboard",
-            description=f"Past {days} days (Active + Inactive Time)",
+            description=f"Past {days} days",
             color=discord.Color.gold(),
         )
 
@@ -382,13 +412,21 @@ class VoiceTracker(commands.Cog):
                 total_seconds = data["total_seconds"]
                 hours = int(total_seconds // 3600)
                 minutes = int((total_seconds % 3600) // 60)
+
+                active_percentage = (
+                    (data["total_seconds"] - data["inactive_seconds"]) / data["total_seconds"] * 100
+                    if data["total_seconds"] > 0 and data["inactive_seconds"] >= 0
+                    else 0
+                )
+
                 username = data["username"]
 
                 medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
 
-                leaderboard_text += f"{medal} **{username}**: {hours}h {minutes}m\n"
+                leaderboard_text += f"{medal} **{username}**: {hours}h {minutes}m ({active_percentage}% active time)\n"
 
             embed.add_field(name="Top Active Users", value=leaderboard_text, inline=False)
+
         else:
             embed.add_field(name="No Data", value="No voice activity recorded yet.", inline=False)
 
@@ -427,6 +465,7 @@ class VoiceTracker(commands.Cog):
                     value=f"📍 {channel_name}\n⏱️ {minutes}m {seconds}s",
                     inline=True,
                 )
+
                 guild_sessions += 1
 
         for user_id, session_id in self.inactive_sessions.items():

@@ -140,6 +140,7 @@ class VoiceDatabase:
             start_time=datetime.now(),
             is_active=is_active,
         )
+
         return session.id
 
     @staticmethod
@@ -193,8 +194,7 @@ class VoiceDatabase:
         if is_active is not None:
             query = query.where(VoiceSession.is_active == is_active)
 
-        result = query.scalar()
-        return result or 0.0
+        return query.scalar() or 0.0
 
     @staticmethod
     async def get_guild_stats(guild_id: str, days: int) -> list[GuildStat]:

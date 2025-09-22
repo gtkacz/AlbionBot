@@ -131,7 +131,7 @@ def main() -> None:  # noqa: C901, PLR0915
             await ctx.send(f"Missing required argument: {error.param.name}")
 
         else:
-            logger.exception(f"Command error in {ctx.command}")
+            logger.exception(f"Command error in {ctx.command}: {error}", exc_info=error)
 
     @bot.event
     async def on_error(event: str, *args: list[Any], **_kwargs: dict[str, Any]) -> None:
