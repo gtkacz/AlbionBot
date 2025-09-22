@@ -327,8 +327,8 @@ class VoiceTracker(commands.Cog):
         offline_pct = (total_offline_seconds / seconds_in_day) * 100 if total_offline_seconds > 0 else 0
 
         online_hours = 24 - int(total_offline_seconds // 3600)
-        online_minutes = (24 * 60) - int((total_offline_seconds % 3600) // 60)
-        online_seconds = (online_minutes * 60) - int(total_offline_seconds % 60)
+        online_minutes = 60 - int((total_offline_seconds % 3600) // 60)
+        online_seconds = 60 - int(total_offline_seconds % 60)
         online_pct = 100 - ((total_offline_seconds / seconds_in_day) * 100 if total_offline_seconds > 0 else 0)
 
         active_hours = int(total_active_seconds // 3600)
@@ -360,25 +360,25 @@ class VoiceTracker(commands.Cog):
         )
 
         embed.add_field(
-            name="Active Time",
+            name="🗣️ Active Time",
             value=f"{active_hours}h {active_minutes}m {active_seconds}s ({active_pct:.1f}%)",
             inline=False,
         )
 
         embed.add_field(
-            name="AFK Time",
+            name="🗣️ AFK Time",
             value=f"{inactive_hours}h {inactive_minutes}m {inactive_seconds}s ({inactive_pct:.1f}%)",
             inline=False,
         )
 
         embed.add_field(
-            name="Online",
+            name="🌐 Online",
             value=f"{online_hours}h {online_minutes}m {online_seconds}s ({online_pct:.1f}%)",
             inline=False,
         )
 
         embed.add_field(
-            name="Offline",
+            name="🌐 Offline",
             value=f"{offline_hours}h {offline_minutes}m {offline_seconds}s ({offline_pct:.1f}%)",
             inline=False,
         )
@@ -415,10 +415,6 @@ class VoiceTracker(commands.Cog):
                 current_time = await self.db.get_active_session_time(self.active_sessions[user_id])
                 stat["total_seconds"] += current_time
 
-            if user_id in self.inactive_sessions:
-                current_time = await self.db.get_active_session_time(self.inactive_sessions[user_id])
-                stat["inactive_seconds"] += current_time
-
         sorted_users = sorted(user_stats, key=itemgetter("total_seconds"), reverse=True)
         self.logger.info(f"Generated stats for {len(sorted_users)} users over {days} days")
 
@@ -436,17 +432,11 @@ class VoiceTracker(commands.Cog):
                 hours = int(total_seconds // 3600)
                 minutes = int((total_seconds % 3600) // 60)
 
-                active_percentage = (
-                    (data["total_seconds"] - data["inactive_seconds"]) / data["total_seconds"] * 100
-                    if data["total_seconds"] > 0 and data["inactive_seconds"] >= 0
-                    else 0
-                )
-
                 username = data["username"]
 
                 medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
 
-                leaderboard_text += f"{medal} **{username}**: {hours}h {minutes}m ({active_percentage}% active time)\n"
+                leaderboard_text += f"{medal} **{username}**: {hours}h {minutes}m\n"
 
             embed.add_field(name="Top Active Users", value=leaderboard_text, inline=False)
 
