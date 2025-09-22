@@ -36,6 +36,7 @@ class VoiceTracker(commands.Cog):
         """
         if pathlib.Path(self.data_file).exists():
             with pathlib.Path(self.data_file).open(encoding="utf-8") as f:
+                self.logger.debug("Loaded existing voice activity data.")
                 return json.load(f)
 
         return {}
@@ -43,6 +44,7 @@ class VoiceTracker(commands.Cog):
     def save_data(self) -> None:
         """Save data to JSON file."""
         with pathlib.Path(self.data_file).open("w", encoding="utf-8") as f:
+            self.logger.debug("Saving voice activity data.")
             json.dump(self.daily_data, f, indent=2)
 
     @staticmethod
@@ -140,6 +142,7 @@ class VoiceTracker(commands.Cog):
         elif after.channel is not None and (before.self_mute != after.self_mute or before.mute != after.mute):
             if after.self_mute or after.mute:
                 self.end_session(member)
+
             elif self.is_user_active(member):
                 self.start_session(member)
 
