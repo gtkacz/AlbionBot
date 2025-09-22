@@ -5,6 +5,7 @@ from glob import glob
 from typing import Optional
 
 import peewee
+from loguru._logger import Logger
 from peewee import BooleanField, CharField, DateTimeField, FloatField, ForeignKeyField, Model, SqliteDatabase
 
 from custom_types import GuildStat
@@ -57,13 +58,14 @@ class VoiceSession(_BaseModel):
 class VoiceDatabase:
     """Database handler for voice activity tracking."""
 
-    def __init__(self, db_path: str = "voice_activity.db") -> None:
+    def __init__(self, db_path: str = "voice_activity.db", logger: Logger) -> None:
         """
         Initialize the database connection.
 
         Args:
             db_path (optional): Path to the SQLite database file. Defaults to "voice_activity.db".
         """
+        self.logger = logger
         self.db_path = db_path
         database.init(db_path)
 
@@ -249,8 +251,7 @@ class VoiceDatabase:
         except VoiceSession.DoesNotExist:
             return 0.0
 
-    @staticmethod
-    async def export_to_json() -> None:
+    async def export_to_json(self) -> None:
         """Export all database tables to JSON backup."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"voice_backup_{timestamp}.json"
@@ -284,6 +285,8 @@ class VoiceDatabase:
 
         with pathlib.Path(filename).open("w", encoding="utf-8") as f:  # noqa: ASYNC230
             json.dump(data, f, indent=2)
+
+        self.logger.debug(data)
 
         await VoiceDatabase.cleanup_old_backups()
 

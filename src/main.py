@@ -37,7 +37,7 @@ async def run_http_server() -> None:
     await runner.setup()
 
     port = int(environ.get("PORT", "8080"))
-    site = web.TCPSite(runner, "localhost", port)
+    site = web.TCPSite(runner, "0.0.0.0", port)  # noqa: S104
 
     await site.start()
 

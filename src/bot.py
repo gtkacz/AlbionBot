@@ -24,7 +24,7 @@ class VoiceTracker(commands.Cog):
         """
         self.logger = logger
         self.bot = bot
-        self.db = VoiceDatabase()
+        self.db = VoiceDatabase(logger)
         self.active_sessions: dict[str, int] = {}
         self.inactive_sessions: dict[str, int] = {}
         self.logger.info("VoiceTracker cog initialized")
