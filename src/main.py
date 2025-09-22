@@ -33,7 +33,7 @@ def main() -> None:
     async def on_error(event: str, *args: list[Any], **kwargs: dict[str, Any]) -> None:  # noqa: ARG001, RUF029
         logger.error(f"Error in {event}: {args[0] if args else 'Unknown error'}")
 
-    bot.run(environ.get("DISCORD_TOKEN", ""))
+    bot.run(environ.get("DISCORD_TOKEN", ""), log_handler=logger)
 
 
 if __name__ == "__main__":
