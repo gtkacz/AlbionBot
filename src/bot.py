@@ -1,17 +1,20 @@
-import json
-import pathlib
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
+from operator import itemgetter
 from typing import Optional
 
 import discord
-import loguru
 from discord.ext import commands, tasks
+from loguru._logger import Logger
+
+from database import VoiceDatabase
 
 
 class VoiceTracker(commands.Cog):
-    """Tracks and reports users' voice channel activity on a daily basis."""
+    """
+    Tracks and reports users' voice channel activity on a daily basis.
+    """
 
-    def __init__(self, bot: commands.Bot, logger: loguru.Logger) -> None:
+    def __init__(self, bot: commands.Bot, logger: Logger) -> None:
         """
         Initialize the VoiceTracker cog.
 
@@ -21,18 +24,24 @@ class VoiceTracker(commands.Cog):
         """
         self.logger = logger
         self.bot = bot
-        self.data_file = "voice_activity.json"
-        self.sessions = {}
-        self.daily_data = self.load_data()
+        self.db = VoiceDatabase()
+        self.sessions: dict[str, int] = {}
         self.logger.info("VoiceTracker cog initialized")
 
         self.daily_reset.start()
-        self.save_task.start()
+        self.bot.loop.create_task(self.initialize())
 
-        self.bot.loop.create_task(self.track_existing_users())
+    async def initialize(self) -> None:
+        """
+        Initialize database and track existing users.
+        """
+        await self.db.connect()
+        await self.track_existing_users()
 
     async def track_existing_users(self) -> None:
-        """Track users who are already in voice channels when the bot starts."""
+        """
+        Track users who are already in voice channels when the bot starts.
+        """
         self.logger.info("Starting to track existing users in voice channels")
 
         await self.bot.wait_until_ready()
@@ -46,7 +55,7 @@ class VoiceTracker(commands.Cog):
 
                 for member in channel.members:
                     if self.is_user_active(member):
-                        self.start_session(member)
+                        await self.start_session(member)
                         tracked_count += 1
                         self.logger.info(f"Started tracking existing user: {member.name} in {channel.name}")
 
@@ -55,46 +64,13 @@ class VoiceTracker(commands.Cog):
 
         self.logger.info(f"Finished tracking existing users. Started tracking {tracked_count} users.")
 
-    def load_data(self) -> dict:
-        """
-        Load saved data from JSON file.
-
-        Returns:
-            dict: The loaded data.
-        """
-        if pathlib.Path(self.data_file).exists():
-            try:
-                with pathlib.Path(self.data_file).open(encoding="utf-8") as f:
-                    data = json.load(f)
-                    self.logger.info(f"Loaded existing voice activity data from {self.data_file}")
-                    self.logger.debug(f"Loaded data contains {len(data)} days of records")
-                    return data
-
-            except Exception:
-                self.logger.exception("Failed to load data file")
-                return {}
-        else:
-            self.logger.info(f"No existing data file found at {self.data_file}, starting fresh")
-            return {}
-
-    def save_data(self) -> None:
-        """Save data to JSON file."""
-        try:
-            with pathlib.Path(self.data_file).open("w", encoding="utf-8") as f:
-                json.dump(self.daily_data, f, indent=2)
-                self.logger.debug(f"Successfully saved voice activity data to {self.data_file}")
-                self.logger.debug(f"Saved data for {len(self.daily_data)} days")
-
-        except Exception:
-            self.logger.exception("Failed to save data")
-
     @staticmethod
     def get_today_key() -> str:
         """
         Get today's date as a string key.
 
         Returns:
-            str: Today's date in 'YYYY-MM-DD' format.
+            Today's date in 'YYYY-MM-DD' format.
         """
         return datetime.now().strftime("%Y-%m-%d")
 
@@ -107,7 +83,7 @@ class VoiceTracker(commands.Cog):
             member: The member to check.
 
         Returns:
-            bool: True if user is active, False otherwise.
+            True if user is active, False otherwise.
         """
         if not member.voice or not member.voice.channel:
             return False
@@ -117,7 +93,7 @@ class VoiceTracker(commands.Cog):
 
         return member.status not in {discord.Status.invisible, discord.Status.idle, discord.Status.offline}
 
-    def start_session(self, member: discord.Member) -> None:
+    async def start_session(self, member: discord.Member) -> None:
         """
         Start tracking a voice session.
 
@@ -127,9 +103,12 @@ class VoiceTracker(commands.Cog):
         user_id = str(member.id)
 
         if user_id not in self.sessions and self.is_user_active(member):
-            self.sessions[user_id] = {"start_time": datetime.now(), "guild_id": str(member.guild.id)}
+            session_id = await self.db.start_session(user_id, str(member.guild.id), member.name, member.guild.name)
+            self.sessions[user_id] = session_id
             self.logger.info(f"Started tracking {member.name} (ID: {user_id}) in guild {member.guild.name}")
-            self.logger.debug(f"Session details: Guild ID: {member.guild.id}, Channel: {member.voice.channel.name}")
+            self.logger.debug(
+                f"Session ID: {session_id}, Guild ID: {member.guild.id}, Channel: {member.voice.channel.name}",
+            )
             self.logger.debug(f"Total active sessions: {len(self.sessions)}")
 
         elif user_id in self.sessions:
@@ -138,7 +117,7 @@ class VoiceTracker(commands.Cog):
         else:
             self.logger.debug(f"User {member.name} doesn't meet activity criteria")
 
-    def end_session(self, member: discord.Member) -> None:
+    async def end_session(self, member: discord.Member) -> None:
         """
         End a voice session and record the time.
 
@@ -148,34 +127,12 @@ class VoiceTracker(commands.Cog):
         user_id = str(member.id)
 
         if user_id in self.sessions:
-            session = self.sessions.pop(user_id)
-            duration = (datetime.now() - session["start_time"]).total_seconds()
+            session_id = self.sessions.pop(user_id)
+            await self.db.end_session(session_id)
 
-            today_key = self.get_today_key()
-            guild_id = session["guild_id"]
-
-            self.logger.debug(f"Ending session for {member.name} (ID: {user_id})")
-            self.logger.debug(f"Session duration: {duration:.2f} seconds ({duration / 60:.2f} minutes)")
-
-            if today_key not in self.daily_data:
-                self.daily_data[today_key] = {}
-                self.logger.debug(f"Created new date entry for {today_key}")
-
-            if guild_id not in self.daily_data[today_key]:
-                self.daily_data[today_key][guild_id] = {}
-                self.logger.debug(f"Created new guild entry for guild {guild_id} on {today_key}")
-
-            if user_id not in self.daily_data[today_key][guild_id]:
-                self.daily_data[today_key][guild_id][user_id] = {"username": member.name, "total_seconds": 0}
-                self.logger.debug(f"Created new user entry for {member.name} in guild {guild_id}")
-
-            previous_total = self.daily_data[today_key][guild_id][user_id]["total_seconds"]
-            self.daily_data[today_key][guild_id][user_id]["total_seconds"] += duration
-            new_total = self.daily_data[today_key][guild_id][user_id]["total_seconds"]
-
-            self.logger.info(f"Ended tracking {member.name} (ID: {user_id}) - Duration: {duration:.2f}s")
-            self.logger.debug(f"Previous total: {previous_total:.2f}s, New total: {new_total:.2f}s")
+            self.logger.info(f"Ended tracking {member.name} (ID: {user_id})")
             self.logger.debug(f"Remaining active sessions: {len(self.sessions)}")
+
         else:
             self.logger.debug(f"No active session found for {member.name} (ID: {user_id})")
 
@@ -202,20 +159,20 @@ class VoiceTracker(commands.Cog):
 
         if before.channel is None and after.channel is not None:
             self.logger.info(f"{member.name} joined voice channel {after.channel.name}")
-            self.start_session(member)
+            await self.start_session(member)
 
         elif before.channel is not None and after.channel is None:
             self.logger.info(f"{member.name} left voice channel {before.channel.name}")
-            self.end_session(member)
+            await self.end_session(member)
 
         elif after.channel is not None and (before.self_mute != after.self_mute or before.mute != after.mute):
             if after.self_mute or after.mute:
                 self.logger.info(f"{member.name} muted (self: {after.self_mute}, server: {after.mute})")
-                self.end_session(member)
+                await self.end_session(member)
 
             elif self.is_user_active(member):
                 self.logger.info(f"{member.name} unmuted and is active")
-                self.start_session(member)
+                await self.start_session(member)
 
     @commands.Cog.listener()
     async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
@@ -232,7 +189,7 @@ class VoiceTracker(commands.Cog):
 
             if after.status in {discord.Status.invisible, discord.Status.idle, discord.Status.offline}:
                 self.logger.info(f"{after.name} went {after.status}, ending session")
-                self.end_session(after)
+                await self.end_session(after)
 
             elif before.status in {
                 discord.Status.invisible,
@@ -240,46 +197,27 @@ class VoiceTracker(commands.Cog):
                 discord.Status.offline,
             } and self.is_user_active(after):
                 self.logger.info(f"{after.name} became active from {before.status}")
-                self.start_session(after)
+                await self.start_session(after)
 
     @tasks.loop(time=time(0, 0))
     async def daily_reset(self) -> None:
-        """Reset daily tracking at midnight."""
+        """
+        Reset daily tracking at midnight.
+        """
         self.logger.info("Starting daily reset task")
 
-        # End all active sessions
         sessions_ended = 0
-        for user_id in list(self.sessions.keys()):
-            guild = self.bot.get_guild(int(self.sessions[user_id]["guild_id"]))
 
-            if guild:
-                member = guild.get_member(int(user_id))
-
-                if member:
-                    self.end_session(member)
-                    sessions_ended += 1
-                    self.logger.debug(f"Ended session for {member.name} during daily reset")
+        for user_id, session_id in list(self.sessions.items()):
+            await self.db.end_session(session_id)
+            self.sessions.pop(user_id)
+            sessions_ended += 1
+            self.logger.debug(f"Ended session {session_id} for user {user_id} during daily reset")
 
         self.logger.info(f"Ended {sessions_ended} active sessions during daily reset")
 
-        # Clean up old data (>30 days)
-        cutoff_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-        keys_to_remove = [key for key in self.daily_data if key < cutoff_date]
-
-        for key in keys_to_remove:
-            self.logger.debug(f"Removing old data for date: {key}")
-            del self.daily_data[key]
-
-        self.logger.info(f"Removed {len(keys_to_remove)} old date entries")
-
-        self.save_data()
+        await self.db.cleanup_old_data(30)
         self.logger.info(f"Daily reset completed at {datetime.now()}")
-
-    @tasks.loop(minutes=5)
-    async def save_task(self) -> None:
-        """Periodically save data."""
-        self.logger.debug("Running periodic save task")
-        self.save_data()
 
     @commands.hybrid_command(name="voicetime", description="Check voice time for today")
     async def voice_time(self, ctx: commands.Context, target: Optional[discord.Member] = None) -> None:
@@ -288,7 +226,7 @@ class VoiceTracker(commands.Cog):
 
         Args:
             ctx: The command context.
-            target (optional): The member to check. Defaults to the command invoker.
+            target: The member to check. Defaults to the command invoker.
         """
         target = target or ctx.author
         self.logger.debug(f"Voice time command invoked by {ctx.author.name} for target {target.name}")
@@ -297,19 +235,14 @@ class VoiceTracker(commands.Cog):
         guild_id = str(ctx.guild.id)
         user_id = str(target.id)
 
-        current_session_time = 0
-        if user_id in self.sessions and self.sessions[user_id]["guild_id"] == guild_id:
-            current_session_time = (datetime.now() - self.sessions[user_id]["start_time"]).total_seconds()
+        current_session_time = 0.0
+
+        if user_id in self.sessions:
+            current_session_time = await self.db.get_active_session_time(self.sessions[user_id])
             self.logger.debug(f"User has active session with {current_session_time:.2f} seconds")
 
-        stored_time = 0
-        if (
-            today_key in self.daily_data
-            and guild_id in self.daily_data[today_key]
-            and user_id in self.daily_data[today_key][guild_id]
-        ):
-            stored_time = self.daily_data[today_key][guild_id][user_id]["total_seconds"]
-            self.logger.debug(f"User has {stored_time:.2f} seconds stored for today")
+        stored_time = await self.db.get_user_time_for_date(user_id, guild_id, today_key)
+        self.logger.debug(f"User has {stored_time:.2f} seconds stored for today")
 
         total_seconds = stored_time + current_session_time
         hours = int(total_seconds // 3600)
@@ -330,58 +263,29 @@ class VoiceTracker(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(name="voicestats", description="Show voice activity statistics")
-    async def voice_stats(self, ctx: commands.Context, days: int = 7) -> None:  # noqa: C901, PLR0914
+    async def voice_stats(self, ctx: commands.Context, days: int = 7) -> None:
         """
-        Show voice activity statistics for the past `n` days.
+        Show voice activity statistics for the past n days.
 
         Args:
             ctx: The command context.
-            days (optional): Number of days to look back.
+            days: Number of days to look back.
         """
         self.logger.debug(f"Voice stats command invoked by {ctx.author.name} for {days} days")
 
         days = min(days, 30)
         guild_id = str(ctx.guild.id)
-        user_totals = {}
 
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days - 1)
+        user_stats = await self.db.get_guild_stats(guild_id, days)
 
-        self.logger.debug(f"Calculating stats from {start_date.date()} to {end_date.date()}")
+        for stat in user_stats:
+            user_id = stat["user_id"]
+            if user_id in self.sessions:
+                current_time = await self.db.get_active_session_time(self.sessions[user_id])
+                stat["total_seconds"] += current_time
+                self.logger.debug(f"Added {current_time:.2f}s from active session for {stat['username']}")
 
-        dates_processed = 0
-        for date_key in self.daily_data:
-            date_obj = datetime.strptime(date_key, "%Y-%m-%d")  # noqa: DTZ007
-
-            if start_date.date() <= date_obj.date() <= end_date.date() and guild_id in self.daily_data[date_key]:
-                dates_processed += 1
-                self.logger.debug(f"Processing data for {date_key}")
-
-                for user_id, data in self.daily_data[date_key][guild_id].items():
-                    if user_id not in user_totals:
-                        user_totals[user_id] = {"username": data["username"], "total_seconds": 0}
-
-                    user_totals[user_id]["total_seconds"] += data["total_seconds"]
-
-        self.logger.debug(f"Processed {dates_processed} days of data")
-
-        # Add current sessions
-        for user_id, session in self.sessions.items():
-            if session["guild_id"] == guild_id:
-                if user_id not in user_totals:
-                    member = ctx.guild.get_member(int(user_id))
-
-                    if member:
-                        user_totals[user_id] = {"username": member.name, "total_seconds": 0}
-
-                if user_id in user_totals:
-                    current_time = (datetime.now() - session["start_time"]).total_seconds()
-                    user_totals[user_id]["total_seconds"] += current_time
-                    self.logger.debug(
-                        f"Added {current_time:.2f}s from active session for {user_totals[user_id]['username']}",
-                    )
-
-        sorted_users = sorted(user_totals.items(), key=lambda x: x[1]["total_seconds"], reverse=True)
+        sorted_users = sorted(user_stats, key=itemgetter("total_seconds"), reverse=True)
         self.logger.info(f"Generated stats for {len(sorted_users)} users over {days} days")
 
         embed = discord.Embed(
@@ -392,7 +296,8 @@ class VoiceTracker(commands.Cog):
 
         if sorted_users:
             leaderboard_text = ""
-            for i, (_user_id, data) in enumerate(sorted_users[:10], 1):
+
+            for i, data in enumerate(sorted_users[:10], 1):
                 total_seconds = data["total_seconds"]
                 hours = int(total_seconds // 3600)
                 minutes = int((total_seconds % 3600) // 60)
@@ -428,38 +333,34 @@ class VoiceTracker(commands.Cog):
         embed = discord.Embed(title="Currently Active Voice Sessions", color=discord.Color.green())
 
         guild_sessions = 0
-        for user_id, session in self.sessions.items():
-            if session["guild_id"] == str(ctx.guild.id):
-                member = ctx.guild.get_member(int(user_id))
-                if member:
-                    duration = (datetime.now() - session["start_time"]).total_seconds()
-                    minutes = int(duration // 60)
-                    seconds = int(duration % 60)
-                    embed.add_field(name=member.display_name, value=f"⏱️ {minutes}m {seconds}s", inline=True)
-                    guild_sessions += 1
+
+        for user_id, session_id in self.sessions.items():
+            member = ctx.guild.get_member(int(user_id))
+
+            if member and member.guild.id == ctx.guild.id:
+                duration = await self.db.get_active_session_time(session_id)
+                minutes = int(duration // 60)
+                seconds = int(duration % 60)
+                embed.add_field(name=member.display_name, value=f"⏱️ {minutes}m {seconds}s", inline=True)
+                guild_sessions += 1
 
         self.logger.info(f"Displaying {guild_sessions} active sessions for guild {ctx.guild.name}")
         await ctx.send(embed=embed)
 
-    def cog_unload(self) -> None:
-        """Clean up when cog is unloaded."""
+    async def cog_unload(self) -> None:
+        """
+        Clean up when cog is unloaded.
+        """
         self.logger.info("VoiceTracker cog is being unloaded, cleaning up...")
 
         self.daily_reset.cancel()
-        self.save_task.cancel()
 
         sessions_ended = 0
-        for user_id in list(self.sessions.keys()):
-            guild_id = self.sessions[user_id]["guild_id"]
-            guild = self.bot.get_guild(int(guild_id))
 
-            if guild:
-                member = guild.get_member(int(user_id))
-
-                if member:
-                    self.end_session(member)
-                    sessions_ended += 1
+        for _user_id, session_id in list(self.sessions.items()):
+            await self.db.end_session(session_id)
+            sessions_ended += 1
 
         self.logger.info(f"Ended {sessions_ended} sessions during cog unload")
-        self.save_data()
+        await self.db.close()
         self.logger.info("VoiceTracker cog unloaded successfully")
