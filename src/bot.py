@@ -95,6 +95,9 @@ class VoiceTracker(commands.Cog):
         if member.voice.self_mute or member.voice.mute:
             return False
 
+        if len(member.voice.channel.members) == 1:
+            return False
+
         return member.status not in {discord.Status.invisible, discord.Status.idle, discord.Status.offline}
 
     async def start_active_session(self, member: discord.Member) -> None:
