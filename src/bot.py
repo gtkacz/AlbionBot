@@ -89,6 +89,9 @@ class VoiceTracker(commands.Cog):
         Returns:
             True if user is active, False otherwise.
         """
+        if any(username in member.name for username in ("tbiz", "gwico")):
+            return False
+
         if not member.voice or not member.voice.channel:
             return False
 
