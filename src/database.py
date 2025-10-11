@@ -2,6 +2,7 @@ import json
 import pathlib
 from datetime import datetime, timedelta
 from glob import glob
+from os import environ
 from typing import Optional
 
 import peewee
@@ -50,10 +51,10 @@ class VoiceSession(_BaseModel):
     end_time = DateTimeField(null=True)
     duration_seconds = FloatField(null=True)
     is_active = BooleanField(default=True)
+    is_live = BooleanField(default=False)
 
     class Meta:  # noqa: D106
         indexes = ((("user", "guild"), False),)
-
 
 class VoiceDatabase:
     """Database handler for voice activity tracking."""
@@ -107,6 +108,7 @@ class VoiceDatabase:
         channel_name: str,
         *,
         is_active: bool = True,
+        is_live: bool = False,
     ) -> int:
         """
         Start a new voice session.
@@ -119,6 +121,7 @@ class VoiceDatabase:
             guild_name: The name of the guild.
             channel_name: The name of the channel.
             is_active (optional): Whether the session is active. Defaults to True.
+            is_live (optional): Whether the user is screen sharing. Defaults to False.
 
         Returns:
             int: The ID of the created voice session.
@@ -137,6 +140,7 @@ class VoiceDatabase:
             channel=channel,
             start_time=datetime.now(),
             is_active=is_active,
+            is_live=is_live,
         )
 
         return session.id
@@ -151,7 +155,11 @@ class VoiceDatabase:
         """
         session = VoiceSession.get_by_id(session_id)
         end_time = datetime.now()
+
         duration = (end_time - session.start_time).total_seconds()
+
+        if session.is_live:
+            duration *= float(environ.get("STREAM_BONUS"))
 
         session.end_time = end_time
         session.duration_seconds = duration

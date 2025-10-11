@@ -1,0 +1,277 @@
+{
+  "users": [
+    {
+      "user_id": "532221991986397185",
+      "username": "finnyy7186"
+    },
+    {
+      "user_id": "456789012345678901",
+      "username": "kaitus"
+    },
+    {
+      "user_id": "567890123456789012",
+      "username": "davidkcohen"
+    },
+    {
+      "user_id": "678901234567890123",
+      "username": "zruteucu"
+    },
+    {
+      "user_id": "173487328268910594",
+      "username": "deicid3"
+    },
+    {
+      "user_id": "203741996941180928",
+      "username": "renansn"
+    },
+    {
+      "user_id": "227844798147592194",
+      "username": "zruteucu"
+    },
+    {
+      "user_id": "248499866160988160",
+      "username": "gwico"
+    },
+    {
+      "user_id": "660721337068945409",
+      "username": "ilovedragonslayer."
+    },
+    {
+      "user_id": "303639799049224203",
+      "username": "tiagohudler"
+    },
+    {
+      "user_id": "337328294083035157",
+      "username": "tbizz9"
+    },
+    {
+      "user_id": "305021323183128577",
+      "username": "veter_"
+    }
+  ],
+  "guilds": [
+    {
+      "guild_id": "307276181890138112",
+      "guild_name": "Tica's Mother Flies\u00a9"
+    }
+  ],
+  "channels": [
+    {
+      "channel_id": "385892799628967947",
+      "channel_name": "\ud83c\udfb1 Sunica",
+      "guild_id": "307276181890138112"
+    },
+    {
+      "channel_id": "307276385351761920",
+      "channel_name": "\ud83d\udd25 Moloft",
+      "guild_id": "307276181890138112"
+    },
+    {
+      "channel_id": "1421181494566584410",
+      "channel_name": "Anti AFK",
+      "guild_id": "307276181890138112"
+    }
+  ],
+  "voice_sessions": [
+    {
+      "id": 1,
+      "user_id": "305021323183128577",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 109200.0,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "user_id": "248499866160988160",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 79620.0,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "user_id": "173487328268910594",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 65100.0,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "user_id": "337328294083035157",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 56400.0,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "user_id": "303639799049224203",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 54240.0,
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "user_id": "532221991986397185",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 30600.0,
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "user_id": "203741996941180928",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 15060.0,
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "user_id": "678901234567890123",
+      "guild_id": "307276181890138112",
+      "channel_id": "385892799628967947",
+      "start_time": "2025-09-21T10:00:00",
+      "end_time": "2025-09-21T22:20:00",
+      "duration_seconds": 720.0,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "user_id": "173487328268910594",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.224677",
+      "end_time": "2025-09-27T16:52:35.366528",
+      "duration_seconds": 15.141851,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "user_id": "203741996941180928",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.236637",
+      "end_time": "2025-09-27T16:52:35.371706",
+      "duration_seconds": 15.135069,
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "user_id": "227844798147592194",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.248349",
+      "end_time": "2025-09-27T16:52:35.383590",
+      "duration_seconds": 15.135241,
+      "is_active": false
+    },
+    {
+      "id": 12,
+      "user_id": "248499866160988160",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.261090",
+      "end_time": "2025-09-27T16:52:35.374390",
+      "duration_seconds": 15.1133,
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "user_id": "305021323183128577",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.277183",
+      "end_time": "2025-09-27T16:52:35.377274",
+      "duration_seconds": 15.100091,
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "user_id": "337328294083035157",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.290678",
+      "end_time": "2025-09-27T16:52:35.380158",
+      "duration_seconds": 15.08948,
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "user_id": "660721337068945409",
+      "guild_id": "307276181890138112",
+      "channel_id": "307276385351761920",
+      "start_time": "2025-09-27T16:52:20.307099",
+      "end_time": "2025-09-27T16:52:35.386757",
+      "duration_seconds": 15.079658,
+      "is_active": false
+    },
+    {
+      "id": 16,
+      "user_id": "303639799049224203",
+      "guild_id": "307276181890138112",
+      "channel_id": "1421181494566584410",
+      "start_time": "2025-10-11T18:19:10.928638",
+      "end_time": "2025-10-11T18:22:37.333850",
+      "duration_seconds": 258.00651500000004,
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "user_id": "305021323183128577",
+      "guild_id": "307276181890138112",
+      "channel_id": "1421181494566584410",
+      "start_time": "2025-10-11T18:19:12.136892",
+      "end_time": "2025-10-11T18:19:18.886353",
+      "duration_seconds": 6.749461,
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "user_id": "337328294083035157",
+      "guild_id": "307276181890138112",
+      "channel_id": "1421181494566584410",
+      "start_time": "2025-10-11T18:19:13.237552",
+      "end_time": "2025-10-11T18:22:37.645111",
+      "duration_seconds": 255.50944875,
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "user_id": "305021323183128577",
+      "guild_id": "307276181890138112",
+      "channel_id": "1421181494566584410",
+      "start_time": "2025-10-11T18:19:20.001459",
+      "end_time": "2025-10-11T18:19:28.899587",
+      "duration_seconds": 11.12266,
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "user_id": "305021323183128577",
+      "guild_id": "307276181890138112",
+      "channel_id": "1421181494566584410",
+      "start_time": "2025-10-11T18:19:30.002486",
+      "end_time": "2025-10-11T18:22:37.919531",
+      "duration_seconds": 187.917045,
+      "is_active": true
+    }
+  ]
+}
