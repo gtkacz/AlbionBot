@@ -19,8 +19,8 @@ class VoiceTracker(commands.Cog):
 		Initialize the VoiceTracker cog.
 
 		Args:
-		    bot: The Discord bot instance.
-		    logger: Logger instance for logging.
+			bot: The Discord bot instance.
+			logger: Logger instance for logging.
 		"""
 		self.logger = logger
 		self.bot = bot
@@ -58,13 +58,13 @@ class VoiceTracker(commands.Cog):
 				for member in channel.members:
 					if self.is_user_active(member):
 						await self.start_active_session(member)
-						tracked_count += 1
 						self.logger.info(f"Started tracking existing active user: {member.name} in {channel.name}")
 
 					else:
 						await self.start_inactive_session(member)
-						tracked_count += 1
 						self.logger.info(f"Started tracking existing inactive user: {member.name} in {channel.name}")
+
+					tracked_count += 1
 
 		self.logger.info(f"Finished tracking existing users. Started tracking {tracked_count} users.")
 
@@ -74,7 +74,7 @@ class VoiceTracker(commands.Cog):
 		Get today's date as a string key.
 
 		Returns:
-		    Today's date in 'YYYY-MM-DD' format.
+			Today's date in 'YYYY-MM-DD' format.
 		"""
 		return datetime.now().strftime("%Y-%m-%d")
 
@@ -84,10 +84,10 @@ class VoiceTracker(commands.Cog):
 		Check if user meets all activity criteria.
 
 		Args:
-		    member: The member to check.
+			member: The member to check.
 
 		Returns:
-		    True if user is active, False otherwise.
+			True if user is active, False otherwise.
 		"""
 		if not member.voice or not member.voice.channel:
 			return False
@@ -105,7 +105,7 @@ class VoiceTracker(commands.Cog):
 		Start tracking a voice session as active.
 
 		Args:
-		    member: The member to start tracking.
+			member: The member to start tracking.
 		"""
 		user_id = str(member.id)
 
@@ -133,7 +133,7 @@ class VoiceTracker(commands.Cog):
 		Start tracking a voice session as active.
 
 		Args:
-		    member: The member to start tracking.
+			member: The member to start tracking.
 		"""
 		user_id = str(member.id)
 
@@ -160,7 +160,7 @@ class VoiceTracker(commands.Cog):
 		End an active voice session and record the time.
 
 		Args:
-		    member: The member to stop tracking.
+			member: The member to stop tracking.
 		"""
 		user_id = str(member.id)
 
@@ -174,7 +174,7 @@ class VoiceTracker(commands.Cog):
 		End an inactive voice session and record the time.
 
 		Args:
-		    member: The member to stop tracking.
+			member: The member to stop tracking.
 		"""
 		user_id = str(member.id)
 
@@ -188,7 +188,7 @@ class VoiceTracker(commands.Cog):
 		End all voice sessions for a member.
 
 		Args:
-		    member: The member whose sessions to end.
+			member: The member whose sessions to end.
 		"""
 		await self.end_active_session(member)
 		await self.end_inactive_session(member)
@@ -204,9 +204,9 @@ class VoiceTracker(commands.Cog):
 		Handle voice channel changes.
 
 		Args:
-		    member: The member whose voice state changed.
-		    before: The previous voice state.
-		    after: The new voice state.
+			member: The member whose voice state changed.
+			before: The previous voice state.
+			after: The new voice state.
 		"""
 		self.logger.debug(f"Voice state update for {member.name} (ID: {member.id})")
 
@@ -247,10 +247,10 @@ class VoiceTracker(commands.Cog):
 				await self.end_inactive_session(member)
 				await self.start_active_session(member)
 
-		elif after.channel is not None and self.is_user_active(member):
-			if before.self_stream or after.self_stream:
-				await self.end_active_session(member)
-				await self.start_active_session(member)
+		elif after.channel is not None and self.is_user_active(member) and before.self_stream != after.self_stream:
+			self.logger.info(f"{member.name} stream state changed from {before.self_stream} to {after.self_stream}")
+			await self.end_active_session(member)
+			await self.start_active_session(member)
 
 	@commands.Cog.listener()
 	async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
@@ -258,8 +258,8 @@ class VoiceTracker(commands.Cog):
 		Handle status changes.
 
 		Args:
-		    before: The member before the update.
-		    after: The member after the update.
+			before: The member before the update.
+			after: The member after the update.
 		"""
 		if after.voice and after.voice.channel and before.status != after.status:
 			self.logger.debug(f"Presence update for {after.name} (ID: {after.id})")
@@ -302,8 +302,8 @@ class VoiceTracker(commands.Cog):
 		Check voice time for today.
 
 		Args:
-		    ctx: The command context.
-		    target: The member to check. Defaults to the command invoker.
+			ctx: The command context.
+			target: The member to check. Defaults to the command invoker.
 		"""
 		target = target or ctx.author
 		self.logger.debug(f"Voice time command invoked by {ctx.author.name} for target {target.name}")
@@ -407,8 +407,8 @@ class VoiceTracker(commands.Cog):
 		Show voice activity statistics for the past n days.
 
 		Args:
-		    ctx: The command context.
-		    days: Number of days to look back.
+			ctx: The command context.
+			days: Number of days to look back.
 		"""
 		self.logger.debug(f"Voice stats command invoked by {ctx.author.name} for {days} days")
 
@@ -462,7 +462,7 @@ class VoiceTracker(commands.Cog):
 		Show currently tracked users.
 
 		Args:
-		    ctx: The command context.
+			ctx: The command context.
 		"""
 		self.logger.debug(f"Voice active command invoked by admin {ctx.author.name}")
 
