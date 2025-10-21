@@ -70,6 +70,7 @@ class VoiceDatabase:
 		"""
 		self.logger = logger
 		self.db_path = db_path
+		self.stream_bonus = float(environ.get("STREAM_BONUS", "1.25"))
 		database.init(db_path)
 
 	@staticmethod
@@ -160,7 +161,7 @@ class VoiceDatabase:
 
 		if session.is_live:
 			self.logger.debug(f"Applying stream bonus multiplier to session for user {session.user.user_id}")
-			duration *= float(environ.get("STREAM_BONUS", "1.25"))
+			duration *= self.stream_bonus
 
 		session.end_time = end_time
 		session.duration_seconds = duration
