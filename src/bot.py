@@ -247,10 +247,14 @@ class VoiceTracker(commands.Cog):
 				await self.end_inactive_session(member)
 				await self.start_active_session(member)
 
-		elif after.channel is not None and self.is_user_active(member) and before.self_stream != after.self_stream:
+		elif after.channel is not None and before.self_stream != after.self_stream:
 			self.logger.info(f"{member.name} stream state changed from {before.self_stream} to {after.self_stream}")
-			await self.end_active_session(member)
-			await self.start_active_session(member)
+			if self.is_user_active(member):
+				await self.end_active_session(member)
+				await self.start_active_session(member)
+			else:
+				await self.end_inactive_session(member)
+				await self.start_inactive_session(member)
 
 	@commands.Cog.listener()
 	async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
