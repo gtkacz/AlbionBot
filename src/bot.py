@@ -459,7 +459,7 @@ class VoiceTracker(commands.Cog):
 
 		await ctx.send(embed=embed)
 
-	@commands.hybrid_command(name="voiceactive", description="Show currently tracked users (Admin only)")
+	@commands.hybrid_command(name="voiceactive", description="Show currently tracked users")
 	async def voice_active(self, ctx: commands.Context) -> None:
 		"""
 		Show currently tracked users.
@@ -467,7 +467,7 @@ class VoiceTracker(commands.Cog):
 		Args:
 			ctx: The command context.
 		"""
-		self.logger.debug(f"Voice active command invoked by admin {ctx.author.name}")
+		self.logger.debug(f"Voice active command invoked by {ctx.author.name}")
 
 		if not self.active_sessions and not self.inactive_sessions:
 			await ctx.send("No users are currently being tracked.")
