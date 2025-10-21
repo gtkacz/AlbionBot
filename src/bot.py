@@ -456,7 +456,6 @@ class VoiceTracker(commands.Cog):
 		await ctx.send(embed=embed)
 
 	@commands.hybrid_command(name="voiceactive", description="Show currently tracked users (Admin only)")
-	@commands.has_permissions(administrator=True)
 	async def voice_active(self, ctx: commands.Context) -> None:
 		"""
 		Show currently tracked users.
